@@ -1,0 +1,6 @@
+strava-archiv-unzipped/
+node_modules/
+.idea/
+activities.kml
+strava-archiv.zip
+*.iml
