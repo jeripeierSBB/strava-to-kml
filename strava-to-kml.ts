@@ -44,7 +44,16 @@ function extractGzFilesRecursively(dir: string): void {
 
 const __filename = new URL(import.meta.url).pathname;
 const __dirname = path.dirname(__filename);
-const MAIN_ZIP_PATH = path.join(__dirname, 'strava-archiv.zip');
+// Require the ZIP file name as a command line argument
+const ZIP_ARG = process.argv[2];
+if (!ZIP_ARG) {
+  console.error(
+    'Error: Please provide the Strava archive ZIP file as the first argument.',
+  );
+  console.error('Usage: node ./strava-to-kml.ts <your-archive.zip>');
+  process.exit(1);
+}
+const MAIN_ZIP_PATH = path.join(__dirname, ZIP_ARG);
 const TEMP_EXTRACTED_DIR = path.join(__dirname, 'strava-archiv-unzipped');
 const TEMP_DIR = path.join(__dirname, 'strava-archiv-temp');
 const OUTPUT_DIR = __dirname;
@@ -346,7 +355,7 @@ async function main() {
   removeDirRecursive(TEMP_EXTRACTED_DIR);
 
   if (!fs.existsSync(MAIN_ZIP_PATH)) {
-    console.error('Error: strava-archiv.zip not found!');
+    console.error(`Error: ZIP file not found: ${MAIN_ZIP_PATH}`);
     process.exit(1);
   }
 
