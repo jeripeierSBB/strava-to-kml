@@ -6,7 +6,7 @@ This tool extracts your Strava archive and generates a KML file with all your ac
 
 1. **Download your Strava archive**
    - Go to [Strava Settings > Account > Download your Account](https://www.strava.com/account)
-   - Request your archive and download the `strava-archiv.zip` file
+   - Request your archive and download the `strava-archive.zip` file
 
    - Place your downloaded ZIP file (e.g. `strava-archive.zip`) in the root of this project directory
 

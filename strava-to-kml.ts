@@ -1,7 +1,7 @@
 // ================================================================================
 // This file was generated and/or modified with the assistance of AI (GitHub Copilot)
 // ================================================================================
-// This script extracts strava-archiv.zip, processes all activities, and generates
+// This script extracts strava-archive.zip, processes all activities, and generates
 // a KML file grouped by activity type.
 import AdmZip from 'adm-zip';
 import FitParser from 'fit-file-parser';
