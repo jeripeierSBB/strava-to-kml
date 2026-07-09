@@ -4,6 +4,7 @@
 // This script extracts strava-archiv.zip, processes all activities, and generates
 // a KML file grouped by activity type.
 import AdmZip from 'adm-zip';
+import FitParser from 'fit-file-parser';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -213,6 +214,44 @@ class ActivityFileParser {
     return ActivityFileParser.formatDateTime(timeStr);
   }
 
+  static async extractCoordinatesFromFit(filePath: string): Promise<string[]> {
+    const parser = new FitParser({
+      force: true,
+      speedUnit: 'km/h',
+      lengthUnit: 'm',
+      temperatureUnit: 'celsius',
+      elapsedRecordField: true,
+      mode: 'list',
+    });
+    const data = await parser.parseAsync(fs.readFileSync(filePath));
+    const points: Point[] = (data.records ?? [])
+      .filter((r) => r.position_lat != null && r.position_long != null)
+      .map((r) => ({
+        lat: r.position_lat!,
+        lon: r.position_long!,
+        time: r.timestamp?.toString(),
+      }));
+    const filtered = ActivityFileParser.filterJumps(points);
+    const coords = filtered.map((p) => `${p.lon},${p.lat}`).join(' ');
+    return coords ? [coords] : [];
+  }
+
+  static async extractStartTimeFromFit(filePath: string): Promise<string> {
+    const parser = new FitParser({
+      force: true,
+      speedUnit: 'km/h',
+      lengthUnit: 'm',
+      temperatureUnit: 'celsius',
+      elapsedRecordField: true,
+      mode: 'list',
+    });
+    const data = await parser.parseAsync(fs.readFileSync(filePath));
+    const timeStr =
+      data.sessions?.[0]?.start_time?.toString() ??
+      data.records?.find((r) => r.timestamp)?.timestamp?.toString();
+    return ActivityFileParser.formatDateTime(timeStr);
+  }
+
   static async extractStartTimeFromTcx(filePath: string): Promise<string> {
     const parsed = await parseStringPromise(fs.readFileSync(filePath, 'utf-8'));
     const timeStr =
@@ -344,7 +383,9 @@ class ActivityMetaEntry {
 function getAllActivityFiles(dir: string): string[] {
   return fs
     .readdirSync(dir)
-    .filter((f) => f.endsWith('.gpx') || f.endsWith('.tcx'))
+    .filter(
+      (f) => f.endsWith('.gpx') || f.endsWith('.tcx') || f.endsWith('.fit'),
+    )
     .map((f) => path.join(dir, f));
 }
 
@@ -396,17 +437,22 @@ async function main() {
     try {
       const isGpx = ext === '.gpx';
       const isTcx = ext === '.tcx';
-      if (!isGpx && !isTcx) {
+      const isFit = ext === '.fit';
+      if (!isGpx && !isTcx && !isFit) {
         continue;
       }
 
       const [coordinatesArr, datePrefix] = await Promise.all([
         isGpx
           ? ActivityFileParser.extractCoordinatesFromGpx(file)
-          : ActivityFileParser.extractCoordinatesFromTcx(file),
+          : isTcx
+            ? ActivityFileParser.extractCoordinatesFromTcx(file)
+            : ActivityFileParser.extractCoordinatesFromFit(file),
         isGpx
           ? ActivityFileParser.extractStartTimeFromGpx(file)
-          : ActivityFileParser.extractStartTimeFromTcx(file),
+          : isTcx
+            ? ActivityFileParser.extractStartTimeFromTcx(file)
+            : ActivityFileParser.extractStartTimeFromFit(file),
       ]);
 
       const metaEntry = ActivityMetaEntry.getByFileName(path.basename(file));
