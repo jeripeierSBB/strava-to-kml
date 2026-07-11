@@ -1,30 +1,40 @@
 # strava-to-kml
 
-This tool extracts your Strava archive and generates a KML file with all your activities, grouped by activity type.
+This tool extracts your Strava archive and generates a KML file with all your activities, grouped by activity type and color-coded.
+Supported activity file formats: **GPX**, **TCX** (`.gz` compressed supported), **FIT**.
 
 ## Usage
 
+### Option A – Strava download link (URL)
+
+Pass the download link from the Strava export e-mail directly – the script will download the archive automatically:
+
+```sh
+npm install
+node ./strava-to-kml.ts "https://..."
+```
+
+> Make sure to wrap the URL in quotes so the shell doesn't interpret special characters.
+
+### Option B – Local archive file
+
 1. **Download your Strava archive**
    - Go to [Strava Settings > Account > Download your Account](https://www.strava.com/account)
-   - Request your archive and download the `strava-archive.zip` file
-
-   - Place your downloaded ZIP file (e.g. `strava-archive.zip`) in the root of this project directory
+   - Request your archive and download the ZIP file
+   - Place the ZIP file (e.g. `strava-archive.zip`) in the project root
 
 2. **Run the script**
-   - Make sure you have Node.js (v24+) and all dependencies installed (`npm install`)
 
-   - Run the script with your ZIP file as required argument:
+   ```sh
+   npm install
+   node ./strava-to-kml.ts <your-archive.zip>
+   ```
 
-     ```sh
-     node ./strava-to-kml.ts <your-archive.zip>
-     ```
+## Result
 
-3. **Result**
-   - The file `activities.kml` will be generated in the project root
-   - You can open this file in Google Earth or any KML viewer
+- The file `activities.kml` will be generated in the project root.
+- Open it in **Google Earth** or any other KML viewer.
 
 ---
 
-> **Note:** This script will automatically extract, process, and clean up all temporary files. Only the final `activities.kml` will remain.
->
-> The ZIP file argument is required.
+> **Note:** The script automatically extracts, processes, and cleans up all temporary files. Only the final `activities.kml` will remain.

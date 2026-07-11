@@ -41,20 +41,75 @@ function extractGzFilesRecursively(dir: string): void {
   }
 }
 
+// --- Download helper ---------------------------------------------------------
+
+async function downloadFile(url: string, destPath: string): Promise<void> {
+  console.log('Downloading archive from URL...');
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download file: HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const totalBytes = Number(response.headers.get('content-length') ?? 0);
+  const totalMb = totalBytes > 0 ? (totalBytes / 1024 / 1024).toFixed(1) : null;
+
+  const chunks: Uint8Array[] = [];
+  let downloadedBytes = 0;
+  let lastReportedPercent = -1;
+
+  const reader = response.body!.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+    downloadedBytes += value.length;
+
+    if (totalBytes > 0) {
+      const percent = Math.floor((downloadedBytes / totalBytes) * 100);
+      if (percent !== lastReportedPercent && percent % 5 === 0) {
+        const downloadedMb = (downloadedBytes / 1024 / 1024).toFixed(1);
+        process.stdout.write(
+          `\r  ${downloadedMb} MB / ${totalMb} MB (${percent}%)`,
+        );
+        lastReportedPercent = percent;
+      }
+    } else {
+      const downloadedMb = (downloadedBytes / 1024 / 1024).toFixed(1);
+      process.stdout.write(`\r  ${downloadedMb} MB downloaded...`);
+    }
+  }
+
+  process.stdout.write('\n');
+  const buffer = Buffer.concat(chunks);
+  fs.writeFileSync(destPath, buffer);
+  console.log(
+    `Download complete (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB).`,
+  );
+}
+
 // --- Paths -------------------------------------------------------------------
 
 const __filename = new URL(import.meta.url).pathname;
 const __dirname = path.dirname(__filename);
-// Require the ZIP file name as a command line argument
+// Require a ZIP file path or a download URL as the first argument
 const ZIP_ARG = process.argv[2];
 if (!ZIP_ARG) {
   console.error(
-    'Error: Please provide the Strava archive ZIP file as the first argument.',
+    'Error: Please provide the Strava archive ZIP file or a download URL as the first argument.',
   );
   console.error('Usage: node ./strava-to-kml.ts <your-archive.zip>');
+  console.error('       node ./strava-to-kml.ts <https://download-url>');
   process.exit(1);
 }
-const MAIN_ZIP_PATH = path.join(__dirname, ZIP_ARG);
+const IS_URL = /^https?:\/\//i.test(ZIP_ARG ?? '');
+const DOWNLOADED_ZIP_PATH = path.join(__dirname, 'strava-downloaded.zip');
+const MAIN_ZIP_PATH = IS_URL
+  ? DOWNLOADED_ZIP_PATH
+  : path.join(__dirname, ZIP_ARG);
 const TEMP_EXTRACTED_DIR = path.join(__dirname, 'strava-archiv-unzipped');
 const TEMP_DIR = path.join(__dirname, 'strava-archiv-temp');
 const OUTPUT_DIR = __dirname;
@@ -392,6 +447,11 @@ function getAllActivityFiles(dir: string): string[] {
 // --- Main --------------------------------------------------------------------
 
 async function main() {
+  // --- Download Step (if URL was provided) ---
+  if (IS_URL) {
+    await downloadFile(ZIP_ARG!, DOWNLOADED_ZIP_PATH);
+  }
+
   // --- Extraction Step ---
   removeDirRecursive(TEMP_EXTRACTED_DIR);
 
@@ -504,6 +564,11 @@ async function main() {
 
   // Remove the temporary extracted folder
   removeDirRecursive(TEMP_EXTRACTED_DIR);
+
+  // Remove the downloaded ZIP file if it was fetched from a URL
+  if (IS_URL && fs.existsSync(DOWNLOADED_ZIP_PATH)) {
+    fs.unlinkSync(DOWNLOADED_ZIP_PATH);
+  }
 }
 
 main().catch(console.error);
