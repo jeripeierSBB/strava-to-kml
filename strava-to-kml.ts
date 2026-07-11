@@ -116,9 +116,18 @@ const OUTPUT_DIR = __dirname;
 
 // --- KML helpers -------------------------------------------------------------
 
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 class Kml {
   static header(name: string): string {
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://earth.google.com/kml/2.1"><Document><name>${name}</name>`;
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://earth.google.com/kml/2.1"><Document><name>${escapeXml(name)}</name>`;
   }
 
   static footer(): string {
@@ -130,7 +139,7 @@ class Kml {
   }
 
   static folder(name: string, placemarks: string[]): string {
-    return `<Folder><name>${name}</name>${placemarks.join('')}</Folder>`;
+    return `<Folder><name>${escapeXml(name)}</name>${placemarks.join('')}</Folder>`;
   }
 
   static placemark(
@@ -139,7 +148,7 @@ class Kml {
     styleId: string,
     coordinates: string,
   ): string {
-    return `<Placemark><name>${name}</name>${description}<styleUrl>#${styleId}</styleUrl><LineString><tessellate>1</tessellate><coordinates>${coordinates}</coordinates></LineString></Placemark>`;
+    return `<Placemark><name>${escapeXml(name)}</name>${description}<styleUrl>#${styleId}</styleUrl><LineString><tessellate>1</tessellate><coordinates>${coordinates}</coordinates></LineString></Placemark>`;
   }
 }
 
